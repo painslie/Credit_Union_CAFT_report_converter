@@ -1,5 +1,5 @@
 # Credit_Union_CAFT_report_converter
-Used to convert CAFT pdf reports to CSV files (Excel)
+Used to convert Credit Union Central (Canada) CAFT reports from PDF to CSV files (Excel, google sheet, etc.)
 
 
 Examples
