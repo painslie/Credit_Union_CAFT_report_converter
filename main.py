@@ -1,11 +1,10 @@
 import pdfplumber
 import datetime
 import csv
-
 import glob
-
 import sys
 import getopt
+
 
 # Function to convert Credit Union CAFT pdf reports to CSV files.
 #
@@ -75,6 +74,9 @@ def main(arg_report_type, arg_input_file_wildcard, arg_output_file):
                     rows_result, fields, statement_total_result = parse_AFTR0003_pdf_to_string(pdfToString)
                 elif arg_report_type == "CAFT002":
                     rows_result, fields, statement_total_result = parse_CAFT002_pdf_to_string(pdfToString)
+                else:
+                    print('ERROR:', arg_report_type, "is not a recognized report type.")
+                    exit()
 
                 rows += rows_result
                 grand_total += statement_total_result
@@ -126,11 +128,11 @@ def parse_AFTR0003_pdf_to_string(pdfToString):
                 statement_total = float(line_list[3].replace(',',''))  # remove comma from value
 
                 if line.find("PAYMENTS") > -1:
-                    if statement_total == payment_check_sum:
+                    if round(statement_total,2) == round(payment_check_sum,2):
                         # line_list[0] is usually = 'TOTAL', line_list[1] is e.g., = 'REVERSALS', line_list[3] is the amount
                         print("{:<2} {:<17} {:<10} {:<10}".format(' ', line_list[0] + ' ' + line_list[1], line_list[3], style.GREEN + "✔ Balanced!" + style.RESET))
                     else:
-                        print("{:<2} {:<17} {:<10} {:<30} {:<30}  {:<1}".format(' ', "TOTAL PAYMENTS:", statement_total, style.RED + "✘ ERROR: Not balanced!  Check Sum:", payment_check_sum,  style.RESET))
+                        print("{:<2} {:<17} {:<10} {:<30} {:<30}  {:<1}".format(' ', "TOTAL PAYMENTS:", round(statement_total,2), style.RED + "✘ ERROR: Not balanced!  Check Sum:", round(payment_check_sum,2),  style.RESET))
                 else:
                     if statement_total == 0:
                         print("{:<2} {:<17} {:<10} {:<10}".format(' ', line_list[0] + ' ' + line_list[1], line_list[3], style.GREEN + "✔" + style.RESET))

@@ -8,14 +8,20 @@ Initial setup requires installation of the following.
 $ pip3 install pdfplumber
 ```
 
-# Command line Examples
+# Usage
 
 ```bash
 $ python3 main.py --help
-
 main.py -r <report type> -f <input file name, use wildcard for multiple files> -o <output file name>
+````
+
+Command line Examples
+
+```bash
 
 $ python3 main.py -r AFTR0003 -f "*2002*.pdf" -o output.csv
 
 $ python3 main.py -r CAFT002 -f "*2002*.pdf" -o output.csv
+
+$ -r CAFT002 -f "/Users/me/2022/01-Jan/Crys*.pdf" -o /Users/me/2022/01-Jan/temp_output.csv
 ```
