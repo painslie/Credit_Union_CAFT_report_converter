@@ -3,7 +3,6 @@ import datetime
 import csv
 
 import glob
-import os
 
 import sys
 import getopt
@@ -53,7 +52,7 @@ def get_commandline_arguments(argv):
 
     print('Report Type:               ', arg_report_type)
     print('Input Path\File (wildcard):', arg_input_file_wildcard)
-    print('Output Path\File:          ', arg_output_file)
+    print('Output Path\File:          ', arg_output_file, '\n')
 
     return(arg_report_type, arg_input_file_wildcard, arg_output_file)
 
@@ -75,7 +74,11 @@ def main(arg_report_type, arg_input_file_wildcard, arg_output_file):
                     pdfToString += "\n"
                 pdf.close()
                 print(file)
-                rows_result, fields, statement_total_result = parse_pdf_string(pdfToString)
+                if arg_report_type == "AFTR0003":
+                    rows_result, fields, statement_total_result = parse_AFTR0003_pdf_to_string(pdfToString)
+                elif arg_report_type == "CAFT002":
+                    rows_result, fields, statement_total_result = parse_CAFT002_pdf_to_string(pdfToString)
+
                 rows += rows_result
                 grand_total += statement_total_result
 
@@ -89,14 +92,12 @@ def main(arg_report_type, arg_input_file_wildcard, arg_output_file):
     else:
         print("\nError: No files found for:", arg_input_file_wildcard)
 
-def parse_pdf_string(pdfToString):
+def parse_AFTR0003_pdf_to_string(pdfToString):
 
     reportType = ""
     fields = ""
     rows = []
     payment_check_sum = 0
-    reversalCheckSum = 0
-    returnCheckSum = 0
 
     for line in pdfToString.splitlines():
         line_list = line.split(" ")
@@ -105,11 +106,6 @@ def parse_pdf_string(pdfToString):
         if line.find("AFTR0003") > -1:
             reportType = "CAFT_AFTR0003"
             fields = ['Cross Reference', 'Due Date', 'TX Type', 'Transit Route', 'Account Number', 'Amount', 'Item Trace No.', 'Payee Name', 'Invalid Field Numbers']
-
-        # Confirm if report type is CAFT 002; as soon as keyword is found,
-        if line.find("CAFT 002") > -1:
-            reportType = "CAFT002"
-            fields = ['Payee', 'Cross Ref', 'ID', 'Route', 'Transit', 'Account', 'Amount', 'Rec Type', 'TX Type', 'Due Date', 'Freq', 'Expiry Date', 'Sundry Information']
 
         # Parse AFTR0003 report line
         if reportType == "CAFT_AFTR0003":
@@ -126,7 +122,6 @@ def parse_pdf_string(pdfToString):
                         del line_list[9]  # remove last item
                         del line_list[8]  # remove 2nd last item
 
-                #print(line_list)
                 rows.append(line_list)
 
             # Check sums for AFTR0003 report
@@ -135,14 +130,38 @@ def parse_pdf_string(pdfToString):
 
                 if line.find("PAYMENTS") > -1:
                     if statement_total == payment_check_sum:
+                        # line_list[0] is usually = 'TOTAL', line_list[1] is e.g., = 'REVERSALS', line_list[3] is the amount
                         print("{:<2} {:<17} {:<10} {:<10}".format(' ', line_list[0] + ' ' + line_list[1], line_list[3], style.GREEN + "✔ Balanced!" + style.RESET))
                     else:
-                        print("{:<2} {:<17} {:<10} {:<30} {:<30}  {:<1}".format(' ', "TOTAL PAYMENTS:", statement_total, style.RED + "✘ ERROR: Not balanced! Check Sum:", payment_check_sum,  style.RESET))
+                        print("{:<2} {:<17} {:<10} {:<30} {:<30}  {:<1}".format(' ', "TOTAL PAYMENTS:", statement_total, style.RED + "✘ ERROR: Not balanced!  Check Sum:", payment_check_sum,  style.RESET))
                 else:
                     if statement_total == 0:
                         print("{:<2} {:<17} {:<10} {:<10}".format(' ', line_list[0] + ' ' + line_list[1], line_list[3], style.GREEN + "✔" + style.RESET))
                     else:
                         print("  ", line_list[0], line_list[1], line_list[3], " x Error: no trx found!")
+
+    return(rows, fields, payment_check_sum)
+
+def parse_CAFT002_pdf_to_string(pdfToString):
+
+    reportType = ""
+    fields = ""
+    rows = []
+    payment_check_sum = 0
+    statement_total = 0
+
+    last_row = pdfToString.count('\n')
+    current_row = 0
+
+    for line in pdfToString.splitlines():
+        current_row += 1
+        line_list = line.split(" ")
+
+        # Confirm if report type is CAFT 002; as soon as keyword is found,
+        if line.find("CAFT 002") > -1:
+            reportType = "CAFT002"
+            fields = ['Payee', 'Cross Ref', 'ID', 'Route', 'Transit', 'Account', 'Amount', 'Rec Type', 'TX Type',
+                      'Due Date', 'Freq', 'Expiry Date', 'Sundry Information']
 
         # Parse CAFT002 report line
         if reportType == "CAFT002":
@@ -155,16 +174,18 @@ def parse_pdf_string(pdfToString):
                     del line_list[1]
                 elif line_list.index("470") == 10:
                     line_list[0] += line_list[1] + line_list[2]
-                    del line_list[1]
                     del line_list[2]
+                    del line_list[1]
 
+                elif line_list.index("470") == 11:
                     # Convert ' OR ' to '-OR-' so it parses properly
-                    if line_list[8] == "OR":
-                        line_list[7] += '-OR-' + line_list[9]
-                        del line_list[9]  # remove last item
-                        del line_list[8]  # remove 2nd last item
+                    if line_list[2] == "OR":
+                        line_list[0] += line_list[1] + '-OR-' + line_list[3]
+                    del line_list[3]
+                    del line_list[2]
+                    del line_list[1]
 
-                line_list[6] = float(line_list[6].replace(',',''))  # remove comma from value
+                line_list[6] = float(line_list[6].replace(',', ''))  # remove comma from value
                 payment_check_sum = float(line_list[6]) + payment_check_sum
 
                 print(line_list.index("470"), line_list[0], line_list[6])
@@ -174,9 +195,19 @@ def parse_pdf_string(pdfToString):
                 if len(line_list) >= 12:
                     line_list[11] = datetime.datetime.strptime(line_list[11], "%Y-%b-%d").strftime("%Y-%m-%d")
 
-
-                #print(line_list)
                 rows.append(line_list)
+
+            # Check Net Total if the last row of the statement
+            if line.find("Net Total") > -1:
+                statement_total += float(line_list[2].replace(',',''))  # remove comma from value
+
+                if current_row == last_row:
+                    if round(statement_total,2) == round(payment_check_sum,2):
+                        print("{:<17} {:<10} {:<10}".format('   Net Total:', round(statement_total,2), style.GREEN + "✔ Balanced!" + style.RESET))
+                    else:
+                        print("{:<17} {:<10} {:<30} {:<30}  {:<1}".format('   Net Total:', round(statement_total,2),
+                                                                                style.RED + "✘ ERROR: Not balanced!  Check Sum:",
+                                                                                round(payment_check_sum,2), style.RESET))
 
     return(rows, fields, payment_check_sum)
 
