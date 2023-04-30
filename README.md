@@ -10,4 +10,6 @@ $ python3 main.py --help
 main.py -r <report type> -f <input file name, use wildcard for multiple files> -o <output file name>
 
 $ python3 main.py -r AFTR0003 -f "*2002*.pdf" -o output.csv
+
+$ python3 main.py -r CAFT002 -f "*2002*.pdf" -o output.csv
 ```
