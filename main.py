@@ -11,9 +11,6 @@ import getopt
 #
 #
 
-# Initial setup:
-# pip install pdfplumber
-
 # Class of different styles/colors
 class style():
     RED = '\033[31m'
@@ -188,7 +185,7 @@ def parse_CAFT002_pdf_to_string(pdfToString):
                 line_list[6] = float(line_list[6].replace(',', ''))  # remove comma from value
                 payment_check_sum = float(line_list[6]) + payment_check_sum
 
-                print(line_list.index("470"), line_list[0], line_list[6])
+                #print(line_list.index("470"), line_list[0], line_list[6])
 
                 # Convert date, e.g., from '2023-Jan-27' date to '2023-01-27'
                 line_list[9] = datetime.datetime.strptime(line_list[9], "%Y-%b-%d").strftime("%Y-%m-%d")
